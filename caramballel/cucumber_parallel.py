@@ -31,10 +31,12 @@ instances = 0
 
 class Cucumber(object):
 
-    def __init__(self, base_port, args=None, use_xvfb_wrapper=True):
+    def __init__(self, base_port, args=None, use_xvfb_wrapper=True,
+                 use_spork=True):
         self._base_port = base_port
         self._args = args or []
         self._use_xvfb_wrapper = use_xvfb_wrapper
+        self._use_spork = use_spork
         self.output = []
         self._offsets_in_use = []
         self._start_time = datetime.datetime.now()
@@ -55,6 +57,9 @@ class Cucumber(object):
                self._args + [target])
         if self._use_xvfb_wrapper:
             cmd = ['xvfb-run', '--auto-servernum'] + cmd
+        if self._use_spork:
+            cmd += ['--drb', '--port', str(port)]
+        cmd += self._args + [target]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         out = proc.communicate()[0]
         print out
@@ -125,8 +130,8 @@ def run_cucumber_parallel(_features=None, num_threads=None, cc_args=None,
 
 def setup_argparse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('features', nargs='*', 'Features or scenarios to be'
-                        ' processed')
+    parser.add_argument('features', nargs='*', help='Features or scenarios to'
+                        ' be processed')
     parser.add_argument('-n', '--num-threads', type=int, help='Number of'
                         'concurrent cucumber processes')
     parser.add_argument('--cucumber-args', default='', help='Arguments to'
@@ -138,6 +143,7 @@ def setup_argparse():
     parser.add_argument('--run-features', action='store_true', help='Run one'
                         ' feature per process rather than individual '
                         'scenarios')
+    parser.add_argument('--use-spork', action='store_true', help='Use spork')
     return parser.parse_args()
 
 if __name__ == '__main__':
