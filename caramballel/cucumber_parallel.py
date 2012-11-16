@@ -24,6 +24,7 @@ import threading
 import subprocess
 import argparse
 import datetime
+import socket
 
 instances = 0
 
@@ -126,11 +127,14 @@ def wait_for_spork(num_procs, base_port=8990):
     ports = [base_port+i for i in xrange(num_procs)]
     while ports:
         for port in ports:
-            proc = subprocess.Popen(['lsof', '-i', ':{0}'.format(port)],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            if proc.communicate()[0]:
+            try:
+                s = socket.socket()
+                s.connect(('localhost', port))
+            except socket.error:
+                pass
+            else:
                 ports.remove(port)
+                s.close()
         time.sleep(1)
 
 def run_spork(num_procs=None, mongo_name='test_', base_port=8990,
