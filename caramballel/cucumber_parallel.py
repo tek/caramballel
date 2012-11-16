@@ -108,23 +108,23 @@ def print_stats(cucumber):
     print '{0} steps ({1} passed)'.format(step[0], step[1])
     print 'runtime: {0}'.format(stats['runtime'])
 
-def run_cucumber_parallel(_features=None, num_threads=None, cc_args=None,
+def run_cucumber_parallel(_features=None, num_procs=None, cc_args=None,
                           base_port=0, use_xvfb_wrapper=True,
                           batch_features=False):
     cucumber = Cucumber(base_port, args=cc_args,
                         use_xvfb_wrapper=use_xvfb_wrapper)
     if not _features:
         _features = features('features')
-    if not num_threads:
-        num_threads = 5
+    if not num_procs:
+        num_procs = 5
     targets = (_features if batch_features
                else sum(map(scenarios, _features), []))
-    threads = []
+    procs = []
     for target in targets:
-        while instances >= num_threads:
+        while instances >= num_procs:
             time.sleep(1)
-        threads.append(cucumber.thread(target))
-    for thread in threads:
+        procs.append(cucumber.thread(target))
+    for thread in procs:
         thread.join()
     print_stats(cucumber)
 
@@ -132,7 +132,7 @@ def setup_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('features', nargs='*', help='Features or scenarios to'
                         ' be processed')
-    parser.add_argument('-n', '--num-threads', type=int, help='Number of'
+    parser.add_argument('-n', '--num-procs', type=int, help='Number of'
                         'concurrent cucumber processes')
     parser.add_argument('--cucumber-args', default='', help='Arguments to'
                         ' pass to cucumber')
@@ -149,7 +149,7 @@ def setup_argparse():
 if __name__ == '__main__':
     args = setup_argparse()
     run_cucumber_parallel(_features=args.features,
-                          num_threads=args.num_threads,
+                          num_procs=args.num_procs,
                           cc_args=args.cucumber_args.split(),
                           base_port=args.base_port,
                           use_xvfb_wrapper=not args.no_xvfb_wrapper,
