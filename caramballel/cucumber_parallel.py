@@ -22,9 +22,7 @@ import re
 import time
 import threading
 import subprocess
-import sys
 import argparse
-import copy
 import datetime
 
 instances = 0
@@ -52,9 +50,7 @@ class Cucumber(object):
         global instances
         offset = self._get_offset()
         port = self._base_port + offset
-        db_name = 'ulikeme_test_{0}'.format(offset)
-        cmd = (['bundle', 'exec', 'cucumber', '--drb', '--port', str(port)] +
-               self._args + [target])
+        cmd = ['bundle', 'exec', 'cucumber']
         if self._use_xvfb_wrapper:
             cmd = ['xvfb-run', '--auto-servernum'] + cmd
         if self._use_spork:
@@ -109,10 +105,8 @@ def print_stats(cucumber):
     print 'runtime: {0}'.format(stats['runtime'])
 
 def run_cucumber_parallel(_features=None, num_procs=None, cc_args=None,
-                          base_port=0, use_xvfb_wrapper=True,
-                          batch_features=False):
-    cucumber = Cucumber(base_port, args=cc_args,
-                        use_xvfb_wrapper=use_xvfb_wrapper)
+                          base_port=0, batch_features=False, **kw):
+    cucumber = Cucumber(base_port, args=cc_args, **kw)
     if not _features:
         _features = features('features')
     if not num_procs:
@@ -164,7 +158,8 @@ def setup_argparse():
     parser.add_argument('--run-features', action='store_true', help='Run one'
                         ' feature per process rather than individual '
                         'scenarios')
-    parser.add_argument('--use-spork', action='store_true', help='Use spork')
+    parser.add_argument('--no-spork', action='store_true', help='Don\'t use'
+                        'spork')
     parser.add_argument('--run-spork', action='store_true', help='Launch the'
                         'spork services')
     parser.add_argument('--mongo-db', default='test_', help='prefix for mongo'
@@ -185,4 +180,5 @@ if __name__ == '__main__':
                               cc_args=args.cucumber_args.split(),
                               base_port=args.base_port,
                               use_xvfb_wrapper=not args.no_xvfb_wrapper,
-                              batch_features=args.run_features)
+                              batch_features=args.run_features,
+                              use_spork=not args.no_spork)
