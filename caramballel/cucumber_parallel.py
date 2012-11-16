@@ -26,7 +26,6 @@ import argparse
 import datetime
 import socket
 
-instances = 0
 
 class Cucumber(object):
 
@@ -39,6 +38,7 @@ class Cucumber(object):
         self.output = []
         self._offsets_in_use = []
         self._start_time = datetime.datetime.now()
+        self.instances = 0
 
     def _get_offset(self):
         offset = 0
@@ -48,7 +48,6 @@ class Cucumber(object):
         return offset
 
     def target(self, target, instance):
-        global instances
         offset = self._get_offset()
         port = self._base_port + offset
         cmd = ['bundle', 'exec', 'cucumber']
@@ -62,13 +61,14 @@ class Cucumber(object):
         print out
         self.output.extend(out.split('\n'))
         self._offsets_in_use.remove(offset)
-        instances -= 1
+        self.instances -= 1
 
     def thread(self, target):
-        global instances
-        thread = threading.Thread(target=self.target, args=(target, instances,))
-        instances += 1
-        print 'Starting cucumber child no. {0}: {1}'.format(instances, target)
+        thread = threading.Thread(target=self.target, args=(target,
+                                                            self.instances,))
+        self.instances += 1
+        print 'Starting cucumber child no. {0}: {1}'.format(self.instances,
+                                                            target)
         thread.start()
         return thread
 
@@ -116,7 +116,7 @@ def run_cucumber_parallel(_features=None, num_procs=None, cc_args=None,
                else sum(map(scenarios, _features), []))
     procs = []
     for target in targets:
-        while instances >= num_procs:
+        while cucumber.instances >= num_procs:
             time.sleep(1)
         procs.append(cucumber.thread(target))
     for thread in procs:
