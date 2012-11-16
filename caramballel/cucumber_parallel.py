@@ -128,6 +128,27 @@ def run_cucumber_parallel(_features=None, num_procs=None, cc_args=None,
         thread.join()
     print_stats(cucumber)
 
+def wait_for_spork(num_procs, base_port=8990):
+    ports = [base_port+i for i in xrange(num_procs)]
+    while ports:
+        for port in ports:
+            proc = subprocess.Popen(['lsof', '-i', ':{0}'.format(port)],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            if proc.communicate()[0]:
+                ports.remove(port)
+        time.sleep(1)
+
+def run_spork(num_procs=None, mongo_name='test_', base_port=8990,
+              _wait_for_spork=True):
+    if not num_procs:
+        num_procs = 5
+    args = ['bundle', 'exec', 'spork', 'cucumber', '-p']
+    for num in xrange(num_procs):
+        subprocess.Popen(args + [str(base_port+num)])
+    if _wait_for_spork:
+        wait_for_spork(num_procs=num_procs, base_port=base_port)
+
 def setup_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('features', nargs='*', help='Features or scenarios to'
@@ -144,13 +165,24 @@ def setup_argparse():
                         ' feature per process rather than individual '
                         'scenarios')
     parser.add_argument('--use-spork', action='store_true', help='Use spork')
+    parser.add_argument('--run-spork', action='store_true', help='Launch the'
+                        'spork services')
+    parser.add_argument('--mongo-db', default='test_', help='prefix for mongo'
+                        ' db name')
+    parser.add_argument('--no-wait-for-spork', action='store_true',
+                        help='Don\'t wait for all spork processes to be up and'
+                        'running')
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = setup_argparse()
-    run_cucumber_parallel(_features=args.features,
-                          num_procs=args.num_procs,
-                          cc_args=args.cucumber_args.split(),
-                          base_port=args.base_port,
-                          use_xvfb_wrapper=not args.no_xvfb_wrapper,
-                          batch_features=args.run_features)
+    if args.run_spork:
+        run_spork(num_procs=args.num_procs, mongo_name=args.mongo_db,
+                  _wait_for_spork=not args.no_wait_for_spork)
+    else:
+        run_cucumber_parallel(_features=args.features,
+                              num_procs=args.num_procs,
+                              cc_args=args.cucumber_args.split(),
+                              base_port=args.base_port,
+                              use_xvfb_wrapper=not args.no_xvfb_wrapper,
+                              batch_features=args.run_features)
