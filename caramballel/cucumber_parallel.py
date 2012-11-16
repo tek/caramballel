@@ -26,6 +26,7 @@ import argparse
 import datetime
 import socket
 import signal
+import copy
 
 class Cucumber(object):
 
@@ -152,13 +153,15 @@ def wait_for_spork(num_procs, base_port=8990):
                 s.close()
         time.sleep(1)
 
-def run_spork(num_procs=None, mongo_name='test_', base_port=8990,
+def run_spork(num_procs=None, mongo_name='test', base_port=8990,
               _wait_for_spork=True):
     if not num_procs:
         num_procs = 5
     args = ['bundle', 'exec', 'spork', 'cucumber', '-p']
+    env = copy.copy(os.environ)
     for num in xrange(num_procs):
-        subprocess.Popen(args + [str(base_port+num)])
+        env['MONGO_DB'] = '{0}_{1}'.format(mongo_name, num)
+        subprocess.Popen(args + [str(base_port+num)], env=env)
     if _wait_for_spork:
         wait_for_spork(num_procs=num_procs, base_port=base_port)
 
@@ -181,7 +184,7 @@ def setup_argparse():
                         'spork')
     parser.add_argument('--run-spork', action='store_true', help='Launch the'
                         'spork services')
-    parser.add_argument('--mongo-db', default='test_', help='prefix for mongo'
+    parser.add_argument('--mongo-db', default='test', help='prefix for mongo'
                         ' db name')
     parser.add_argument('--no-wait-for-spork', action='store_true',
                         help='Don\'t wait for all spork processes to be up and'
