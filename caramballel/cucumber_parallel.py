@@ -25,7 +25,7 @@ import subprocess
 import argparse
 import datetime
 import socket
-
+import signal
 
 class Cucumber(object):
 
@@ -39,6 +39,8 @@ class Cucumber(object):
         self._offsets_in_use = []
         self._start_time = datetime.datetime.now()
         self.instances = 0
+        self.killed = False
+        self._procs = []
 
     def _get_offset(self):
         offset = 0
@@ -57,20 +59,23 @@ class Cucumber(object):
             cmd += ['--drb', '--port', str(port)]
         cmd += self._args + [target]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        self._procs.append(proc)
         out = proc.communicate()[0]
         print out
         self.output.extend(out.split('\n'))
         self._offsets_in_use.remove(offset)
+        self._procs.remove(proc)
         self.instances -= 1
 
     def thread(self, target):
-        thread = threading.Thread(target=self.target, args=(target,
-                                                            self.instances,))
-        self.instances += 1
-        print 'Starting cucumber child no. {0}: {1}'.format(self.instances,
-                                                            target)
-        thread.start()
-        return thread
+        if not self.killed:
+            args = (target, self.instances,)
+            thread = threading.Thread(target=self.target, args=args)
+            self.instances += 1
+            info =  'Starting cucumber child no. {0}: {1}'
+            print info.format(self.instances, target)
+            thread.start()
+            return thread
 
     @property
     def statistics(self):
@@ -86,6 +91,12 @@ class Cucumber(object):
                     stats[match.group(2)][1] += int(match2.group(1))
         stats['runtime'] = str(datetime.datetime.now() - self._start_time)
         return stats
+
+    def kill(self, signum, frame):
+        print 'Interrupted by signal {}.'.format(signum)
+        self.killed = True
+        for proc in self._procs:
+            proc.kill()
 
 def features(directory):
     return glob.glob(os.path.join(directory, '*.feature'))
@@ -114,13 +125,17 @@ def run_cucumber_parallel(_features=None, num_procs=None, cc_args=None,
         num_procs = 5
     targets = (_features if batch_features
                else sum(map(scenarios, _features), []))
-    procs = []
+    threads = []
+    signal.signal(signal.SIGINT, cucumber.kill)
     for target in targets:
+        if cucumber.killed:
+            break
         while cucumber.instances >= num_procs:
             time.sleep(1)
-        procs.append(cucumber.thread(target))
-    for thread in procs:
-        thread.join()
+        threads.append(cucumber.thread(target))
+    for thread in threads:
+        if thread is not None:
+            thread.join()
     print_stats(cucumber)
 
 def wait_for_spork(num_procs, base_port=8990):
