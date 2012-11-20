@@ -170,7 +170,7 @@ def setup_argparse():
     parser.add_argument('features', nargs='*', help='Features or scenarios to'
                         ' be processed')
     parser.add_argument('-n', '--num-procs', type=int, help='Number of'
-                        'concurrent cucumber processes')
+                        ' concurrent cucumber processes')
     parser.add_argument('--cucumber-args', default='', help='Arguments to'
                         ' pass to cucumber')
     parser.add_argument('--base-port', default=8990, type=int, help='Port of'
@@ -181,14 +181,14 @@ def setup_argparse():
                         ' feature per process rather than individual '
                         'scenarios')
     parser.add_argument('--no-spork', action='store_true', help='Don\'t use'
-                        'spork')
+                        ' spork')
     parser.add_argument('--run-spork', action='store_true', help='Launch the'
-                        'spork services')
+                        ' spork services')
     parser.add_argument('--mongo-db', default='test', help='prefix for mongo'
                         ' db name')
     parser.add_argument('--no-wait-for-spork', action='store_true',
                         help='Don\'t wait for all spork processes to be up and'
-                        'running')
+                        ' running')
     return parser.parse_args()
 
 if __name__ == '__main__':
